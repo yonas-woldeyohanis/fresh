@@ -14,9 +14,10 @@ class AccessMiddleware(BaseMiddleware):
         self, handler: Callable[[CallbackQuery, dict[str, Any]], Awaitable[Any]], event: CallbackQuery,
         data: dict[str, Any],
     ) -> Any:
-        if event.data and event.data.startswith("mat:"):
+        if event.data and (event.data.startswith("mat:") or event.data.startswith("dl:")):
             try:
-                material_id = int(event.data.split(":")[1])
+                # Both 'mat:123' and 'dl:wm:123' or 'dl:nowm:123'
+                material_id = int(event.data.split(":")[-1])
             except (IndexError, ValueError):
                 await event.answer("Invalid item.", show_alert=True)
                 return None

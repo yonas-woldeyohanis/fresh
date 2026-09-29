@@ -6,19 +6,20 @@ from bot.db import crud
 from bot.db.models import User
 from bot.keyboards.inline import course_menu_kb, materials_kb
 from bot.utils.access import has_access
-from bot.utils.constants import CATEGORIES, COURSES
+from bot.utils.constants import CATEGORIES
 from bot.utils.telegram import safe_edit
 
 router = Router()
 
 
 @router.callback_query(F.data.startswith("course:"))
-async def open_course(cb: CallbackQuery) -> None:
+async def open_course(cb: CallbackQuery, session: AsyncSession) -> None:
     code = cb.data.split(":")[1]
-    if code not in COURSES:
+    courses = await crud.get_course_dict(session)
+    if code not in courses:
         return await cb.answer("Unknown course.", show_alert=True)
     await safe_edit(
-        cb.message, f"📚 <b>{COURSES[code]}</b>\n────────────────────────\nChoose a resource type below:", course_menu_kb(code)
+        cb.message, f"📚 <b>{courses[code]}</b>\n────────────────────────\nChoose a resource type below:", course_menu_kb(code)
     )
     await cb.answer()
 
@@ -29,11 +30,13 @@ async def open_category(cb: CallbackQuery, session: AsyncSession, db_user: User)
         _, code, cat = cb.data.split(":")
     except ValueError:
         return await cb.answer()
-    if code not in COURSES or cat not in CATEGORIES:
+        
+    courses = await crud.get_course_dict(session)
+    if code not in courses or cat not in CATEGORIES:
         return await cb.answer("Unknown category.", show_alert=True)
 
     items = await crud.list_materials(session, code, cat)
-    header = f"{CATEGORIES[cat]} — <b>{COURSES[code]}</b>\n────────────────────────"
+    header = f"{CATEGORIES[cat]} — <b>{courses[code]}</b>\n────────────────────────"
     text = f"{header}\nTap any item below to receive it directly in chat." if items else f"{header}\n\n<i>Nothing uploaded yet — check back soon!</i>"
     await safe_edit(cb.message, text, materials_kb(items, has_access(db_user), back=f"course:{code}"))
     await cb.answer()

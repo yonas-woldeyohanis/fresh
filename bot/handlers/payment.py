@@ -81,10 +81,25 @@ async def receive_receipt(
             caption=caption,
             reply_markup=admin_review_kb(payment.id),
         )
-    except TelegramAPIError:
-        log.exception("Could not forward receipt to admin chat")
-        await session.rollback()
-        return await message.answer("⚠️ Couldn't submit your receipt right now. Please try again in a few minutes.")
+    except TelegramAPIError as e:
+        log.warning(f"Could not forward receipt to admin chat: {e}. Trying individual admins...")
+        sent = False
+        for admin_id in settings.admin_id_set:
+            try:
+                await bot.send_photo(
+                    admin_id,
+                    message.photo[-1].file_id,
+                    caption=caption,
+                    reply_markup=admin_review_kb(payment.id),
+                )
+                sent = True
+            except TelegramAPIError:
+                pass
+        
+        if not sent:
+            log.exception("Could not forward receipt to ANY admin.")
+            await session.rollback()
+            return await message.answer("⚠️ Couldn't submit your receipt right now. Please try again in a few minutes.")
 
     await session.commit()
     await state.clear()

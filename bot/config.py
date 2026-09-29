@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     storage_channel_id: int
     admin_chat_id: int
     admin_ids: str = ""
+    gemini_api_key: str = ""
+    groq_api_key: str = ""
 
     cbe_account: str = "1000XXXXXXXXX"
     telebirr_number: str = "09XXXXXXXX"

@@ -62,15 +62,27 @@ async def send_dashboard(message: Message, session: AsyncSession, is_edit: bool 
 
 # ---------- Upload Flow ----------
 @router.callback_query(IsAdmin(), F.data.startswith("admin:upload:"))
-async def admin_upload_flow(cb: CallbackQuery, state: FSMContext) -> None:
+async def admin_upload_flow(cb: CallbackQuery, state: FSMContext, session: AsyncSession) -> None:
     parts = cb.data.split(":")
     step = parts[2]
     
     if step == "course":
-        await cb.message.edit_text("📚 <b>Select a Course to upload to:</b>", reply_markup=admin_courses_kb("upload"))
+        courses_dict = await crud.get_course_dict(session)
+        await cb.message.edit_text("📚 <b>Select a Course to upload to:</b>", reply_markup=admin_courses_kb("upload", courses_dict))
     elif step == "cat":
         course = parts[3]
-        await cb.message.edit_text(f"📁 <b>{course}</b> - Select Category:", reply_markup=admin_categories_kb("upload", course))
+        if course == "sample":
+            # skip category selection for samples
+            await state.set_state(AdminMode.uploading)
+            await state.update_data(course="sample", category="sample")
+            await cb.message.edit_text(
+                f"🚀 <b>Free Samples Upload Active</b>\n\n"
+                "👉 Send or forward any files now.\n\n"
+                "<i>Click Cancel or send /admin when you are finished.</i>",
+                reply_markup=admin_cancel_kb()
+            )
+        else:
+            await cb.message.edit_text(f"📁 <b>{course}</b> - Select Category:", reply_markup=admin_categories_kb("upload", course))
     elif step == "final":
         course, category = parts[3], parts[4]
         await state.set_state(AdminMode.uploading)
@@ -91,12 +103,22 @@ async def bulk_upload_material(message: Message, bot: Bot, session: AsyncSession
     category = data["category"]
 
     title = "Untitled"
+    file_id = None
     if message.document and message.document.file_name:
         title = message.document.file_name.rsplit(".", 1)[0].replace("_", " ")
+        file_id = message.document.file_id
     elif message.video and message.video.file_name:
         title = message.video.file_name.rsplit(".", 1)[0].replace("_", " ")
+        file_id = message.video.file_id
     elif message.audio and message.audio.file_name:
         title = message.audio.file_name.rsplit(".", 1)[0].replace("_", " ")
+        file_id = message.audio.file_id
+    elif message.photo:
+        title = "Photo"
+        file_id = message.photo[-1].file_id
+
+    # Temporary UI state
+    wait_msg = await message.answer("⏳ <i>Uploading to storage...</i>")
 
     try:
         copied = await bot.copy_message(
@@ -106,13 +128,14 @@ async def bulk_upload_material(message: Message, bot: Bot, session: AsyncSession
             caption=escape(f"{course} • {category} • {title}"),
         )
     except TelegramAPIError as e:
+        await wait_msg.delete()
         return await message.answer(f"❌ Couldn't store the file: <code>{escape(str(e))}</code>")
 
     m = await crud.add_material(
         session, course_code=course, category=category, title=title,
-        channel_message_id=copied.message_id
+        channel_message_id=copied.message_id, file_id=file_id, is_sample=(course == "sample")
     )
-    await message.answer(f"✅ Added <b>#{m.id}</b>: {escape(title)}\n<i>(Keep sending files, or /admin to exit)</i>")
+    await wait_msg.edit_text(f"✅ Added <b>#{m.id}</b>: {escape(title)}\n<i>(Keep sending files, or /admin to exit)</i>")
 
 
 # ---------- Manage Flow ----------
@@ -122,10 +145,18 @@ async def admin_manage_flow(cb: CallbackQuery, session: AsyncSession) -> None:
     step = parts[2]
 
     if step == "course":
-        await cb.message.edit_text("📚 <b>Select a Course to manage:</b>", reply_markup=admin_courses_kb("manage"))
+        courses_dict = await crud.get_course_dict(session)
+        await cb.message.edit_text("📚 <b>Select a Course to manage:</b>", reply_markup=admin_courses_kb("manage", courses_dict))
     elif step == "cat":
         course = parts[3]
-        await cb.message.edit_text(f"📁 <b>{course}</b> - Select Category:", reply_markup=admin_categories_kb("manage", course))
+        if course == "sample":
+            items = await crud.list_samples(session)
+            if not items:
+                await cb.message.edit_text("📂 <b>Free Samples</b>\nNothing uploaded yet.", reply_markup=admin_back_dash_kb())
+            else:
+                await cb.message.edit_text("📂 <b>Free Samples</b>", reply_markup=admin_materials_kb(items, course, "sample"))
+        else:
+            await cb.message.edit_text(f"📁 <b>{course}</b> - Select Category:", reply_markup=admin_categories_kb("manage", course))
     elif step == "final":
         course, category = parts[3], parts[4]
         materials = await crud.list_materials(session, course, category)
@@ -160,6 +191,8 @@ async def admin_delete_material(cb: CallbackQuery, session: AsyncSession, bot: B
     if not m:
         return await cb.answer("Already deleted.", show_alert=True)
     
+    await cb.message.edit_text(f"⏳ <i>Deleting <b>{escape(m.title)}</b>...</i>")
+    
     # Try deleting from channel
     try:
         await bot.delete_message(chat_id=settings.storage_channel_id, message_id=m.channel_message_id)
@@ -168,7 +201,7 @@ async def admin_delete_material(cb: CallbackQuery, session: AsyncSession, bot: B
         # Ignore error, maybe it was already manually deleted
 
     await crud.delete_material(session, mat_id)
-    await cb.message.edit_text(f"✅ Deleted <b>{escape(m.title)}</b>.\n\nIt is removed from the bot and the storage channel.", reply_markup=admin_cancel_kb())
+    await cb.message.edit_text(f"✅ Deleted <b>{escape(m.title)}</b>.\n\nIt is removed from the bot and the storage channel.", reply_markup=admin_back_dash_kb())
     await cb.answer("Deleted!")
 
 @router.callback_query(IsAdmin(), F.data.startswith("admin:edit:"))
@@ -188,7 +221,7 @@ async def admin_edit_title_finish(message: Message, session: AsyncSession, state
     m = await crud.get_material(session, mat_id)
     if m:
         await crud.update_material_title(session, mat_id, new_title)
-        await message.answer(f"✅ Title updated to:\n<b>{escape(new_title)}</b>", reply_markup=admin_cancel_kb())
+        await message.answer(f"✅ Title updated to:\n<b>{escape(new_title)}</b>", reply_markup=admin_back_dash_kb())
     else:
         await message.answer("❌ Material not found.")
     await state.clear()
@@ -199,6 +232,8 @@ async def admin_edit_title_finish(message: Message, session: AsyncSession, state
 async def review_payment(cb: CallbackQuery, session: AsyncSession, bot: Bot) -> None:
     if cb.from_user.id not in settings.admin_id_set:
         return await cb.answer("⛔ You're not authorized to review payments.", show_alert=True)
+
+    await cb.message.edit_caption(caption=f"{cb.message.html_text}\n\n⏳ <i>Processing...</i>", reply_markup=None)
 
     _, action, pid = cb.data.split(":")
     approve = action == "ok"
@@ -222,3 +257,103 @@ async def review_payment(cb: CallbackQuery, session: AsyncSession, bot: Bot) -> 
     except (TelegramForbiddenError, TelegramAPIError):
         pass
     await cb.answer("Done")
+
+# ---------- Course Management ----------
+from bot.keyboards.admin_kb import admin_course_management_kb, admin_edit_course_kb
+
+@router.callback_query(IsAdmin(), F.data == "admin:courses:list")
+async def admin_list_courses(cb: CallbackQuery, session: AsyncSession) -> None:
+    courses = await crud.get_course_dict(session)
+    await cb.message.edit_text("🏫 <b>Manage Courses</b>\nSelect a course to edit or add a new one:", reply_markup=admin_course_management_kb(courses))
+
+@router.callback_query(IsAdmin(), F.data == "admin:course:add")
+async def admin_add_course_start(cb: CallbackQuery, state: FSMContext) -> None:
+    await cb.message.edit_text("➕ <b>Add New Course</b>\n\nPlease enter a short code for the course (e.g., MATH101). No spaces allowed:", reply_markup=admin_cancel_kb())
+    await state.set_state(AdminMode.waiting_for_course_code)
+
+@router.message(IsAdmin(), AdminMode.waiting_for_course_code)
+async def admin_add_course_code(message: Message, state: FSMContext) -> None:
+    code = message.text.strip().upper().replace(" ", "")
+    await state.update_data(new_course_code=code)
+    await message.answer(f"✅ Code set to <b>{code}</b>.\n\nNow, enter the full display name for the course (e.g., General Physics I):", reply_markup=admin_cancel_kb())
+    await state.set_state(AdminMode.waiting_for_course_name)
+
+@router.message(IsAdmin(), AdminMode.waiting_for_course_name)
+async def admin_add_course_name(message: Message, state: FSMContext, session: AsyncSession) -> None:
+    name = message.text.strip()
+    data = await state.get_data()
+    code = data["new_course_code"]
+    
+    try:
+        await crud.add_course(session, code, name)
+        await message.answer(f"🎉 Successfully added <b>{name}</b> ({code})!", reply_markup=admin_back_dash_kb())
+    except Exception:
+        await message.answer(f"⚠️ Error: Course {code} might already exist.", reply_markup=admin_back_dash_kb())
+    
+    await state.clear()
+
+@router.callback_query(IsAdmin(), F.data.startswith("admin:course:edit:"))
+async def admin_edit_course_menu(cb: CallbackQuery, session: AsyncSession) -> None:
+    code = cb.data.split(":")[3]
+    courses = await crud.get_course_dict(session)
+    if code not in courses:
+        return await cb.answer("Course not found.", show_alert=True)
+    
+    await cb.message.edit_text(f"⚙️ <b>{courses[code]}</b> ({code})\nWhat would you like to do?", reply_markup=admin_edit_course_kb(code))
+
+@router.callback_query(IsAdmin(), F.data.startswith("admin:course:rename:"))
+async def admin_rename_course_start(cb: CallbackQuery, state: FSMContext) -> None:
+    code = cb.data.split(":")[3]
+    await cb.message.edit_text(f"✏️ Enter the new display name for <b>{code}</b>:", reply_markup=admin_cancel_kb())
+    await state.update_data(edit_course_code=code)
+    await state.set_state(AdminMode.editing_course_name)
+
+@router.message(IsAdmin(), AdminMode.editing_course_name)
+async def admin_rename_course(message: Message, state: FSMContext, session: AsyncSession) -> None:
+    new_name = message.text.strip()
+    data = await state.get_data()
+    code = data["edit_course_code"]
+    
+    c = await crud.get_course(session, code)
+    if c:
+        c.name = new_name
+        await session.commit()
+        await message.answer(f"✅ Renamed {code} to <b>{new_name}</b>.", reply_markup=admin_back_dash_kb())
+    else:
+        await message.answer("⚠️ Course not found.", reply_markup=admin_back_dash_kb())
+    await state.clear()
+
+@router.callback_query(IsAdmin(), F.data.startswith("admin:course:del:"))
+async def admin_delete_course(cb: CallbackQuery, session: AsyncSession) -> None:
+    code = cb.data.split(":")[3]
+    success = await crud.delete_course(session, code)
+    if success:
+        await cb.message.edit_text(f"🗑️ Course <b>{code}</b> has been deleted.", reply_markup=admin_back_dash_kb())
+    else:
+        await cb.answer("Course not found.", show_alert=True)
+
+@router.callback_query(IsAdmin(), F.data == "admin:intro_video")
+async def admin_intro_video_start(cb: CallbackQuery, state: FSMContext) -> None:
+    await cb.message.edit_text(
+        "🎬 <b>Set Intro Video</b>\n\n"
+        "Send the video you want to use for the welcome message when students start the bot.\n"
+        "<i>To remove the intro video, send the word 'remove'.</i>",
+        reply_markup=admin_cancel_kb()
+    )
+    await state.set_state(AdminMode.waiting_for_intro_video)
+
+@router.message(IsAdmin(), AdminMode.waiting_for_intro_video)
+async def admin_intro_video_save(message: Message, state: FSMContext, session: AsyncSession) -> None:
+    if message.text and message.text.lower() == "remove":
+        await crud.set_value(session, "intro_video", "")
+        await message.answer("✅ Intro video removed.", reply_markup=admin_back_dash_kb())
+        await state.clear()
+        return
+
+    if not message.video:
+        await message.answer("⚠️ Please send a valid video file, or 'remove'.", reply_markup=admin_cancel_kb())
+        return
+
+    await crud.set_value(session, "intro_video", message.video.file_id)
+    await message.answer("✅ Intro video set successfully! It will now play automatically when a new student starts the bot.", reply_markup=admin_back_dash_kb())
+    await state.clear()

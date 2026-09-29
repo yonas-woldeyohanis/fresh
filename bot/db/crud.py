@@ -4,7 +4,7 @@ from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from bot.db.models import Material, Payment, PaymentStatus, User
+from bot.db.models import Material, Payment, PaymentStatus, User, Course
 from bot.utils.constants import EXAMS
 
 
@@ -146,4 +146,46 @@ async def delete_material(session: AsyncSession, material_id: int) -> Material |
 
 async def update_material_title(session: AsyncSession, material_id: int, new_title: str) -> None:
     await session.execute(update(Material).where(Material.id == material_id).values(title=new_title))
+    await session.commit()
+
+async def add_course(session: AsyncSession, code: str, name: str) -> Course:
+    c = Course(code=code, name=name)
+    session.add(c)
+    await session.commit()
+    return c
+
+async def get_courses(session: AsyncSession) -> list[Course]:
+    res = await session.execute(select(Course).order_by(Course.code))
+    return list(res.scalars().all())
+
+async def get_course(session: AsyncSession, code: str) -> Course | None:
+    res = await session.execute(select(Course).where(Course.code == code))
+    return res.scalar_one_or_none()
+
+async def delete_course(session: AsyncSession, code: str) -> bool:
+    c = await get_course(session, code)
+    if c:
+        await session.delete(c)
+        await session.commit()
+        return True
+    return False
+
+async def get_course_dict(session: AsyncSession) -> dict[str, str]:
+    courses = await get_courses(session)
+    return {c.code: c.name for c in courses}
+
+from bot.db.models import KeyValue
+
+async def get_value(session: AsyncSession, key: str) -> str | None:
+    res = await session.execute(select(KeyValue).where(KeyValue.key == key))
+    kv = res.scalar_one_or_none()
+    return kv.value if kv else None
+
+async def set_value(session: AsyncSession, key: str, value: str) -> None:
+    res = await session.execute(select(KeyValue).where(KeyValue.key == key))
+    kv = res.scalar_one_or_none()
+    if kv:
+        kv.value = value
+    else:
+        session.add(KeyValue(key=key, value=value))
     await session.commit()

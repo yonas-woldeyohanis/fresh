@@ -4,7 +4,7 @@ from aiogram.types import InlineKeyboardButton as Btn
 from aiogram.types import InlineKeyboardMarkup
 
 from bot.db.models import Material
-from bot.utils.constants import CATEGORIES, COURSES
+from bot.utils.constants import CATEGORIES
 
 
 def _grid(buttons: list[Btn], cols: int) -> list[list[Btn]]:
@@ -15,9 +15,11 @@ def _back(data: str, text: str = "⬅️ Back") -> list[Btn]:
     return [Btn(text=text, callback_data=data)]
 
 
-def main_menu_kb(has_access: bool) -> InlineKeyboardMarkup:
-    rows = _grid([Btn(text=f"📚 {n}", callback_data=f"course:{c}") for c, n in COURSES.items()], 2)
+def main_menu_kb(has_access: bool, courses_dict: dict[str, str]) -> InlineKeyboardMarkup:
+    rows = _grid([Btn(text=f"📚 {n}", callback_data=f"course:{c}") for c, n in courses_dict.items()], 2)
     rows.append([Btn(text="🎁 Free Samples", callback_data="samples"), Btn(text="📝 Past Exams", callback_data="exams")])
+    
+    rows.append([Btn(text="🤖 Ask AI Tutor", callback_data="ask_ai:main")])
     
     bottom_row = [Btn(text="👤 My Profile", callback_data="user:profile"), Btn(text="❓ Help & FAQ", callback_data="user:help")]
     rows.append(bottom_row)
@@ -29,6 +31,7 @@ def main_menu_kb(has_access: bool) -> InlineKeyboardMarkup:
 
 def course_menu_kb(code: str) -> InlineKeyboardMarkup:
     rows = _grid([Btn(text=label, callback_data=f"cat:{code}:{key}") for key, label in CATEGORIES.items()], 2)
+    rows.append([Btn(text="🤖 Ask AI Tutor", callback_data=f"ask_ai:{code}")])
     rows.append(_back("menu:main"))
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
@@ -45,8 +48,9 @@ def materials_kb(
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
-def exam_courses_kb() -> InlineKeyboardMarkup:
-    rows = _grid([Btn(text=f"📚 {n}", callback_data=f"ex:c:{c}") for c, n in COURSES.items()], 2)
+def exam_courses_kb(courses_dict: dict[str, str]) -> InlineKeyboardMarkup:
+    rows = _grid([Btn(text=f"📚 {n}", callback_data=f"ex:c:{c}") for c, n in courses_dict.items()], 2)
+    rows.append([Btn(text="🤖 Ask AI Tutor", callback_data="ask_ai:exams")])
     rows.append(_back("menu:main"))
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
@@ -72,5 +76,14 @@ def admin_review_kb(payment_id: int) -> InlineKeyboardMarkup:
                 Btn(text="✅ Approve", callback_data=f"pay:ok:{payment_id}"),
                 Btn(text="❌ Reject", callback_data=f"pay:no:{payment_id}"),
             ]
+        ]
+    )
+
+def watermark_options_kb(material_id: int) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [Btn(text="💧 With Watermark (Slower)", callback_data=f"dl:wm:{material_id}")],
+            [Btn(text="⚡ Instant (No Watermark)", callback_data=f"dl:nowm:{material_id}")],
+            [Btn(text="❌ Cancel", callback_data="delmsg")]
         ]
     )

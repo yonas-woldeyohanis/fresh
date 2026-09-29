@@ -32,16 +32,30 @@ def _welcome(user: User) -> str:
     )
 
 
+from sqlalchemy.ext.asyncio import AsyncSession
+from bot.db import crud
+
 @router.message(CommandStart())
-async def cmd_start(message: Message, state: FSMContext, db_user: User) -> None:
+async def cmd_start(message: Message, state: FSMContext, session: AsyncSession, db_user: User) -> None:
     await state.clear()
-    await message.answer(_welcome(db_user), reply_markup=main_menu_kb(has_access(db_user)))
+    courses_dict = await crud.get_course_dict(session)
+    
+    intro_video_id = await crud.get_value(session, "intro_video")
+    if intro_video_id:
+        try:
+            await message.answer_video(intro_video_id, caption=_welcome(db_user), reply_markup=main_menu_kb(has_access(db_user), courses_dict))
+            return
+        except Exception:
+            pass # fallback to text if video fails
+            
+    await message.answer(_welcome(db_user), reply_markup=main_menu_kb(has_access(db_user), courses_dict))
 
 
 @router.callback_query(F.data == "menu:main")
-async def back_to_main(cb: CallbackQuery, state: FSMContext, db_user: User) -> None:
+async def back_to_main(cb: CallbackQuery, state: FSMContext, session: AsyncSession, db_user: User) -> None:
     await state.clear()
-    await safe_edit(cb.message, _welcome(db_user), main_menu_kb(has_access(db_user)))
+    courses_dict = await crud.get_course_dict(session)
+    await safe_edit(cb.message, _welcome(db_user), main_menu_kb(has_access(db_user), courses_dict))
     await cb.answer()
 
 

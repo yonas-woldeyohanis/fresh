@@ -15,6 +15,19 @@ class PaymentStatus(str, enum.Enum):
     REJECTED = "rejected"
 
 
+class Course(Base):
+    __tablename__ = "courses"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    code: Mapped[str] = mapped_column(String(16), unique=True, index=True)
+    name: Mapped[str] = mapped_column(String(256))
+
+class KeyValue(Base):
+    __tablename__ = "key_value"
+    
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    value: Mapped[str] = mapped_column(String(2048))
+
 class User(Base):
     __tablename__ = "users"
 
@@ -23,6 +36,8 @@ class User(Base):
     full_name: Mapped[str] = mapped_column(String(256), default="")
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    ai_query_count: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
+    last_query_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class Payment(Base):
