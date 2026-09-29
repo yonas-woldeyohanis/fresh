@@ -79,11 +79,3 @@ def admin_review_kb(payment_id: int) -> InlineKeyboardMarkup:
         ]
     )
 
-def watermark_options_kb(material_id: int) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [Btn(text="💧 With Watermark (Slower)", callback_data=f"dl:wm:{material_id}")],
-            [Btn(text="⚡ Instant (No Watermark)", callback_data=f"dl:nowm:{material_id}")],
-            [Btn(text="❌ Cancel", callback_data="delmsg")]
-        ]
-    )

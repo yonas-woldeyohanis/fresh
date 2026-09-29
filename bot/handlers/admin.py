@@ -357,3 +357,52 @@ async def admin_intro_video_save(message: Message, state: FSMContext, session: A
     await crud.set_value(session, "intro_video", message.video.file_id)
     await message.answer("✅ Intro video set successfully! It will now play automatically when a new student starts the bot.", reply_markup=admin_back_dash_kb())
     await state.clear()
+
+# ---------- Payment Settings ----------
+from bot.keyboards.admin_kb import admin_payment_settings_kb
+
+@router.callback_query(IsAdmin(), F.data == "admin:pay_settings")
+async def admin_pay_settings(cb: CallbackQuery, session: AsyncSession) -> None:
+    cbe = await crud.get_value(session, "cbe_account") or settings.cbe_account
+    tele = await crud.get_value(session, "telebirr_number") or settings.telebirr_number
+    holder = await crud.get_value(session, "account_holder") or settings.account_holder
+    price = await crud.get_value(session, "price_etb") or settings.price_etb
+
+    text = (
+        "💳 <b>Payment Settings</b>\n\n"
+        f"🏦 <b>CBE Account:</b> <code>{cbe}</code>\n"
+        f"📱 <b>Telebirr:</b> <code>{tele}</code>\n"
+        f"👤 <b>Account Holder:</b> {holder}\n"
+        f"💵 <b>Price:</b> {price} ETB\n\n"
+        "Tap a button below to update these values dynamically:"
+    )
+    await cb.message.edit_text(text, reply_markup=admin_payment_settings_kb())
+
+@router.callback_query(IsAdmin(), F.data.startswith("admin:paycfg:"))
+async def admin_paycfg_start(cb: CallbackQuery, state: FSMContext) -> None:
+    setting_key = cb.data.split(":")[2]
+    
+    labels = {
+        "cbe_account": "CBE Account Number",
+        "telebirr_number": "Telebirr Number",
+        "account_holder": "Account Holder Name",
+        "price_etb": "Price (in ETB)"
+    }
+    
+    await cb.message.edit_text(
+        f"✏️ Send the new value for <b>{labels.get(setting_key, setting_key)}</b>:", 
+        reply_markup=admin_cancel_kb()
+    )
+    
+    await state.set_state(AdminMode.waiting_for_payment_setting)
+    await state.update_data(setting_key=setting_key)
+
+@router.message(IsAdmin(), AdminMode.waiting_for_payment_setting)
+async def admin_paycfg_save(message: Message, state: FSMContext, session: AsyncSession) -> None:
+    val = message.text.strip()
+    data = await state.get_data()
+    setting_key = data["setting_key"]
+    
+    await crud.set_value(session, setting_key, val)
+    await message.answer(f"✅ Successfully updated!", reply_markup=admin_back_dash_kb())
+    await state.clear()

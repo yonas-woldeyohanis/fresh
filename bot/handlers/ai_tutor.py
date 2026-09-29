@@ -63,11 +63,13 @@ async def prompt_ai_tutor(cb: CallbackQuery, state: FSMContext, session: AsyncSe
         )
         return
 
+    price = await crud.get_value(session, "price_etb") or settings.price_etb
+
     # Pass the entire system dictionary into state so we don't have to fetch it later
     system_knowledge = {
         "courses": list(courses.values()),
         "categories": list(CATEGORIES.values()),
-        "premium_price": settings.price_etb,
+        "premium_price": price,
     }
 
     await state.set_state(AIChatState.waiting_for_question)

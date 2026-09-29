@@ -45,14 +45,20 @@ async def start_payment(cb: CallbackQuery, state: FSMContext, session: AsyncSess
             "⏳ Your receipt is already under review. You'll get a message as soon as it's decided.",
             show_alert=True,
         )
+        
+    cbe = await crud.get_value(session, "cbe_account") or settings.cbe_account
+    tele = await crud.get_value(session, "telebirr_number") or settings.telebirr_number
+    holder = await crud.get_value(session, "account_holder") or settings.account_holder
+    price = await crud.get_value(session, "price_etb") or settings.price_etb
+
     await state.set_state(PaymentFlow.waiting_for_receipt)
     await safe_edit(
         cb.message,
         PAY_TEXT.format(
-            price=settings.price_etb,
-            cbe=escape(settings.cbe_account),
-            tele=escape(settings.telebirr_number),
-            holder=escape(settings.account_holder),
+            price=price,
+            cbe=escape(cbe),
+            tele=escape(tele),
+            holder=escape(holder),
         ),
         cancel_payment_kb(),
     )

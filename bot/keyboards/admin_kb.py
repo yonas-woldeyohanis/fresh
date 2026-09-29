@@ -12,6 +12,7 @@ def admin_main_kb() -> InlineKeyboardMarkup:
         [Btn(text="📤 Upload New Resource", callback_data="admin:upload:course")],
         [Btn(text="📂 Manage Resources", callback_data="admin:manage:course")],
         [Btn(text="🏫 Manage Courses", callback_data="admin:courses:list")],
+        [Btn(text="💳 Payment Settings", callback_data="admin:pay_settings")],
         [Btn(text="🎬 Set Intro Video", callback_data="admin:intro_video")],
         [Btn(text="🔄 Refresh Stats", callback_data="admin:dash")]
     ]
@@ -66,5 +67,15 @@ def admin_edit_course_kb(code: str) -> InlineKeyboardMarkup:
         [Btn(text="✏️ Edit Course Name", callback_data=f"admin:course:rename:{code}")],
         [Btn(text="🗑️ Delete Course", callback_data=f"admin:course:del:{code}")],
         [Btn(text="⬅️ Back to Courses", callback_data="admin:courses:list")]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+def admin_payment_settings_kb() -> InlineKeyboardMarkup:
+    rows = [
+        [Btn(text="🏦 Edit CBE Account", callback_data="admin:paycfg:cbe_account")],
+        [Btn(text="📱 Edit Telebirr", callback_data="admin:paycfg:telebirr_number")],
+        [Btn(text="👤 Edit Holder Name", callback_data="admin:paycfg:account_holder")],
+        [Btn(text="💵 Edit Price (ETB)", callback_data="admin:paycfg:price_etb")],
+        [Btn(text="⬅️ Back to Dashboard", callback_data="admin:dash")]
     ]
     return InlineKeyboardMarkup(inline_keyboard=rows)
