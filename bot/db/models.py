@@ -47,4 +47,5 @@ class Material(Base):
     exam_year: Mapped[int | None] = mapped_column(Integer)
     title: Mapped[str] = mapped_column(Text)
     channel_message_id: Mapped[int] = mapped_column(BigInteger)
+    file_id: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_sample: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))

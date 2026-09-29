@@ -67,6 +67,7 @@ async def add_material(
     category: str,
     title: str,
     channel_message_id: int,
+    file_id: str | None = None,
     exam_year: int | None = None,
     is_sample: bool = False,
 ) -> Material:
@@ -75,6 +76,7 @@ async def add_material(
         category=category,
         title=title,
         channel_message_id=channel_message_id,
+        file_id=file_id,
         exam_year=exam_year,
         is_sample=is_sample,
     )
