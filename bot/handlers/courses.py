@@ -1,0 +1,39 @@
+from aiogram import F, Router
+from aiogram.types import CallbackQuery
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from bot.db import crud
+from bot.db.models import User
+from bot.keyboards.inline import course_menu_kb, materials_kb
+from bot.utils.access import has_access
+from bot.utils.constants import CATEGORIES, COURSES
+from bot.utils.telegram import safe_edit
+
+router = Router()
+
+
+@router.callback_query(F.data.startswith("course:"))
+async def open_course(cb: CallbackQuery) -> None:
+    code = cb.data.split(":")[1]
+    if code not in COURSES:
+        return await cb.answer("Unknown course.", show_alert=True)
+    await safe_edit(
+        cb.message, f"📚 <b>{COURSES[code]}</b>\n────────────────────────\nChoose a resource type below:", course_menu_kb(code)
+    )
+    await cb.answer()
+
+
+@router.callback_query(F.data.startswith("cat:"))
+async def open_category(cb: CallbackQuery, session: AsyncSession, db_user: User) -> None:
+    try:
+        _, code, cat = cb.data.split(":")
+    except ValueError:
+        return await cb.answer()
+    if code not in COURSES or cat not in CATEGORIES:
+        return await cb.answer("Unknown category.", show_alert=True)
+
+    items = await crud.list_materials(session, code, cat)
+    header = f"{CATEGORIES[cat]} — <b>{COURSES[code]}</b>\n────────────────────────"
+    text = f"{header}\nTap any item below to receive it directly in chat." if items else f"{header}\n\n<i>Nothing uploaded yet — check back soon!</i>"
+    await safe_edit(cb.message, text, materials_kb(items, has_access(db_user), back=f"course:{code}"))
+    await cb.answer()
