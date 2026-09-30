@@ -19,7 +19,7 @@ def admin_main_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 def admin_courses_kb(action: str, courses_dict: dict[str, str]) -> InlineKeyboardMarkup:
-    rows = _grid([Btn(text=f"📚 {n}", callback_data=f"admin:{action}:cat:{c}") for c, n in courses_dict.items()], 2)
+    rows = _grid([Btn(text=f"📚 {n}", callback_data=f"admin:{action}:cat:{c}") for c, n in courses_dict.items()], 1)
     # Add pseudo-course for free samples
     if action in ("upload", "manage"):
         rows.append([Btn(text="🎁 Free Samples", callback_data=f"admin:{action}:cat:sample")])
@@ -28,9 +28,9 @@ def admin_courses_kb(action: str, courses_dict: dict[str, str]) -> InlineKeyboar
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 def admin_categories_kb(action: str, course: str) -> InlineKeyboardMarkup:
-    rows = _grid([Btn(text=label, callback_data=f"admin:{action}:final:{course}:{key}") for key, label in CATEGORIES.items()], 2)
-    rows.append([Btn(text="📝 Mid Exams", callback_data=f"admin:{action}:examyear:{course}:exams_mid"),
-                 Btn(text="📝 Final Exams", callback_data=f"admin:{action}:examyear:{course}:exams_final")])
+    rows = _grid([Btn(text=label, callback_data=f"admin:{action}:final:{course}:{key}") for key, label in CATEGORIES.items()], 1)
+    rows.append([Btn(text="📝 Mid Exams", callback_data=f"admin:{action}:examyear:{course}:exams_mid")])
+    rows.append([Btn(text="📝 Final Exams", callback_data=f"admin:{action}:examyear:{course}:exams_final")])
     rows.append([Btn(text="⬅️ Back to Courses", callback_data=f"admin:{action}:course")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
@@ -65,7 +65,7 @@ def admin_back_dash_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[[Btn(text="⬅️ Back to Dashboard", callback_data="admin:dash")]])
 
 def admin_course_management_kb(courses: dict[str, str]) -> InlineKeyboardMarkup:
-    rows = _grid([Btn(text=f"⚙️ {n}", callback_data=f"admin:course:edit:{c}") for c, n in courses.items()], 2)
+    rows = _grid([Btn(text=f"⚙️ {n}", callback_data=f"admin:course:edit:{c}") for c, n in courses.items()], 1)
     rows.append([Btn(text="➕ Add New Course", callback_data="admin:course:add")])
     rows.append([Btn(text="⬅️ Back to Dashboard", callback_data="admin:dash")])
     return InlineKeyboardMarkup(inline_keyboard=rows)

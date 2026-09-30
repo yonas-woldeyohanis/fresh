@@ -16,8 +16,11 @@ def _back(data: str, text: str = "⬅️ Back") -> list[Btn]:
 
 
 def main_menu_kb(has_access: bool, courses_dict: dict[str, str]) -> InlineKeyboardMarkup:
-    rows = _grid([Btn(text=f"📚 {n}", callback_data=f"course:{c}") for c, n in courses_dict.items()], 2)
-    rows.append([Btn(text="🎁 Free Samples", callback_data="samples"), Btn(text="📝 Past Exams", callback_data="exams")])
+    # Big buttons for courses (1 per row)
+    rows = _grid([Btn(text=f"📚 {n}", callback_data=f"course:{c}") for c, n in courses_dict.items()], 1)
+    # Give Free Samples and Past Exams their own wide buttons
+    rows.append([Btn(text="🎁 Free Samples", callback_data="samples")])
+    rows.append([Btn(text="📝 Past Exams", callback_data="exams")])
     
     rows.append([Btn(text="🤖 Ask AI Tutor", callback_data="ask_ai:main")])
     
@@ -30,7 +33,8 @@ def main_menu_kb(has_access: bool, courses_dict: dict[str, str]) -> InlineKeyboa
 
 
 def course_menu_kb(code: str) -> InlineKeyboardMarkup:
-    rows = _grid([Btn(text=label, callback_data=f"cat:{code}:{key}") for key, label in CATEGORIES.items()], 2)
+    # Big buttons for categories (1 per row)
+    rows = _grid([Btn(text=label, callback_data=f"cat:{code}:{key}") for key, label in CATEGORIES.items()], 1)
     rows.append([Btn(text="🤖 Ask AI Tutor", callback_data=f"ask_ai:{code}")])
     rows.append(_back("menu:main"))
     return InlineKeyboardMarkup(inline_keyboard=rows)
@@ -49,14 +53,17 @@ def materials_kb(
 
 
 def exam_courses_kb(courses_dict: dict[str, str]) -> InlineKeyboardMarkup:
-    rows = _grid([Btn(text=f"📚 {n}", callback_data=f"ex:c:{c}") for c, n in courses_dict.items()], 2)
+    # Big buttons for courses
+    rows = _grid([Btn(text=f"📚 {n}", callback_data=f"ex:c:{c}") for c, n in courses_dict.items()], 1)
     rows.append([Btn(text="🤖 Ask AI Tutor", callback_data="ask_ai:exams")])
     rows.append(_back("menu:main"))
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 def exam_types_kb(code: str) -> InlineKeyboardMarkup:
+    # Big buttons for exam types
     rows = [
-        [Btn(text="📝 Mid Exams", callback_data=f"ex:t:{code}:exams_mid"), Btn(text="📝 Final Exams", callback_data=f"ex:t:{code}:exams_final")],
+        [Btn(text="📝 Mid Exams", callback_data=f"ex:t:{code}:exams_mid")],
+        [Btn(text="📝 Final Exams", callback_data=f"ex:t:{code}:exams_final")],
         _back("exams")
     ]
     return InlineKeyboardMarkup(inline_keyboard=rows)

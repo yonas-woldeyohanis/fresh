@@ -115,52 +115,60 @@ async def handle_ai_question(message: Message, state: FSMContext, session: Async
         
         system_instruction = (
             f"You are a supportive, step-by-step academic tutor and system guide for a university freshman bot.\n\n"
-            f"SYSTEM KNOWLEDGE:\n"
-            f"- Premium Access costs {sys_k.get('premium_price', 300)} ETB and gives access to locked files. "
-            f"Users can unlock it by clicking 'Unlock Premium Access' on the main menu.\n"
+            f"SYSTEM KNOWLEDGE & NAVIGATION:\n"
             f"- We have the following Courses: {', '.join(sys_k.get('courses', []))}.\n"
-            f"- For each course, we have these categories: {', '.join(sys_k.get('categories', []))}.\n"
-            f"- Free Samples and Past Exams have their own dedicated buttons on the Main Menu.\n"
-            f"- If a user asks where to find a specific resource, guide them to the correct course/category path in the bot menus.\n"
+            f"- Within each course, materials are divided into: {', '.join(sys_k.get('categories', []))}.\n"
+            f"- 'Past Exams' (Mid and Final) are categorized separately. Users click 'Past Exams', select a course, then select 'Mid Exams' or 'Final Exams', and then choose a specific year (2012-2017).\n"
+            f"- Free Samples are available on the Main Menu.\n"
+            f"- Premium Access costs {sys_k.get('premium_price', 300)} ETB and unlocks all locked files. Users can unlock it by clicking 'Unlock Premium Access' on the main menu, entering their payment info, and uploading a receipt.\n"
+            f"- To use the bot, a user simply clicks the interactive buttons provided on the menus. Tell them to navigate using the inline menu buttons.\n"
+            f"- If a user asks where to find a specific resource (e.g., '2014 Mid Exam for Math'), guide them to the correct path: 'Past Exams' -> 'Math' -> 'Mid Exams' -> '2014'.\n\n"
+            f"TUTORING RULES:\n"
             f"- If a user asks an academic question, solve and explain it step-by-step.\n"
             f"Keep solutions structured, clear, and direct. Decline to answer irrelevant non-academic queries."
         )
         
-        prompt = f"Context: {course_name}\nStudent question: {message.text}"
+        chat_history = data.get("chat_history", f"Context: {course_name}\n")
+        chat_history += f"\nStudent: {message.text}\nAI:"
         
         response = client.models.generate_content(
             model='gemini-3.8-flash',
-            contents=prompt,
+            contents=chat_history,
             config=types.GenerateContentConfig(
                 system_instruction=system_instruction
             ),
         )
         
-        await wait_msg.edit_text(response.text, parse_mode="Markdown")
-        await state.clear()
+        ans = response.text
+        chat_history += f" {ans}\n"
+        await state.update_data(chat_history=chat_history)
+        await wait_msg.edit_text(ans, parse_mode="Markdown")
         
     except Exception as e:
         log.warning(f"Gemini API failed ({e}), falling back to Groq...")
         if not settings.groq_api_key:
             await wait_msg.edit_text("⚠️ Google Gemini is currently overloaded and no backup Groq key was provided. Please try again later.")
-            await state.clear()
             return
             
         try:
             from groq import AsyncGroq
             groq_client = AsyncGroq(api_key=settings.groq_api_key)
+            
+            chat_history = data.get("chat_history", f"Context: {course_name}\n")
+            chat_history += f"\nStudent: {message.text}\nAI:"
+            
             groq_resp = await groq_client.chat.completions.create(
                 messages=[
                     {"role": "system", "content": system_instruction},
-                    {"role": "user", "content": prompt}
+                    {"role": "user", "content": chat_history}
                 ],
                 model="llama3-70b-8192",
             )
             ans = groq_resp.choices[0].message.content
+            chat_history += f" {ans}\n"
+            await state.update_data(chat_history=chat_history)
             await wait_msg.edit_text(ans, parse_mode="Markdown")
-            await state.clear()
             
         except Exception as groq_e:
             log.exception("Both Gemini and Groq failed")
             await wait_msg.edit_text("⚠️ Sorry, both Google and Backup AI brains are overloaded right now. Please try again later.")
-            await state.clear()
