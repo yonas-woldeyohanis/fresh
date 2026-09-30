@@ -346,6 +346,34 @@ async def admin_rename_course(message: Message, state: FSMContext, session: Asyn
         await message.answer("⚠️ Course not found.", reply_markup=admin_back_dash_kb())
     await state.clear()
 
+@router.callback_query(IsAdmin(), F.data.startswith("admin:course:recode:"))
+async def admin_recode_course_start(cb: CallbackQuery, state: FSMContext) -> None:
+    code = cb.data.split(":")[3]
+    await cb.message.edit_text(
+        f"🔤 Enter the new course code for <b>{code}</b> (e.g. MATH1012):\n"
+        "<i>Note: This will safely update the course and all associated files.</i>", 
+        reply_markup=admin_cancel_kb()
+    )
+    await state.update_data(edit_course_code=code)
+    await state.set_state(AdminMode.editing_course_code)
+
+@router.message(IsAdmin(), AdminMode.editing_course_code)
+async def admin_recode_course(message: Message, state: FSMContext, session: AsyncSession) -> None:
+    new_code = message.text.strip().upper().replace(" ", "")
+    data = await state.get_data()
+    old_code = data["edit_course_code"]
+    
+    try:
+        success = await crud.update_course_code(session, old_code, new_code)
+        if success:
+            await message.answer(f"✅ Course code changed from <b>{old_code}</b> to <b>{new_code}</b>.", reply_markup=admin_back_dash_kb())
+        else:
+            await message.answer("⚠️ Course not found.", reply_markup=admin_back_dash_kb())
+    except Exception as e:
+        await message.answer(f"⚠️ Error: The code <b>{new_code}</b> might already exist.", reply_markup=admin_back_dash_kb())
+    
+    await state.clear()
+
 @router.callback_query(IsAdmin(), F.data.startswith("admin:course:del:"))
 async def admin_delete_course(cb: CallbackQuery, session: AsyncSession) -> None:
     code = cb.data.split(":")[3]

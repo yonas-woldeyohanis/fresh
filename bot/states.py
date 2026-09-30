@@ -14,5 +14,6 @@ class AdminMode(StatesGroup):
     waiting_for_course_code = State()
     waiting_for_course_name = State()
     editing_course_name = State()
+    editing_course_code = State()
     waiting_for_intro_video = State()
     waiting_for_payment_setting = State()

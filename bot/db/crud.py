@@ -165,6 +165,15 @@ async def get_course(session: AsyncSession, code: str) -> Course | None:
     res = await session.execute(select(Course).where(Course.code == code))
     return res.scalar_one_or_none()
 
+async def update_course_code(session: AsyncSession, old_code: str, new_code: str) -> bool:
+    c = await get_course(session, old_code)
+    if not c:
+        return False
+    c.code = new_code
+    await session.execute(update(Material).where(Material.course_code == old_code).values(course_code=new_code))
+    await session.commit()
+    return True
+
 async def delete_course(session: AsyncSession, code: str) -> bool:
     c = await get_course(session, code)
     if c:

@@ -71,6 +71,7 @@ def admin_course_management_kb(courses: dict[str, str]) -> InlineKeyboardMarkup:
 
 def admin_edit_course_kb(code: str) -> InlineKeyboardMarkup:
     rows = [
+        [Btn(text="🔤 Edit Course Code", callback_data=f"admin:course:recode:{code}")],
         [Btn(text="✏️ Edit Course Name", callback_data=f"admin:course:rename:{code}")],
         [Btn(text="🗑️ Delete Course", callback_data=f"admin:course:del:{code}")],
         [Btn(text="⬅️ Back to Courses", callback_data="admin:courses:list")]
