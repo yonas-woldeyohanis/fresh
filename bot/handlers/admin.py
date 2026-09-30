@@ -83,12 +83,19 @@ async def admin_upload_flow(cb: CallbackQuery, state: FSMContext, session: Async
                 reply_markup=admin_cancel_kb()
             )
         else:
-            await cb.message.edit_text(f"📁 <b>{course}</b> - Select Category:", reply_markup=admin_categories_kb("upload", course))
+            stats = await crud.get_course_stats(session, course)
+            from bot.utils.constants import format_course_stats
+            stats_text = format_course_stats(stats)
+            await cb.message.edit_text(f"📁 <b>{course}</b> - Select Category:\n────────────────────────\n{stats_text}", reply_markup=admin_categories_kb("upload", course))
     elif step == "examyear":
         course = parts[3]
         exam_type = parts[4]
         title = "Mid Exams" if exam_type == "exams_mid" else "Final Exams"
-        await cb.message.edit_text(f"📝 <b>{course}</b> - Select {title} Year:", reply_markup=admin_exam_years_kb("upload", course, exam_type))
+        
+        stats = await crud.get_course_stats(session, course)
+        count = stats.get(exam_type, 0)
+        
+        await cb.message.edit_text(f"📝 <b>{course}</b> - Select {title} Year:\n────────────────────────\n<i>Contains {count} {title} total</i>", reply_markup=admin_exam_years_kb("upload", course, exam_type))
     elif step == "final":
         course, category = parts[3], parts[4]
         
@@ -175,14 +182,21 @@ async def admin_manage_flow(cb: CallbackQuery, session: AsyncSession) -> None:
             if not items:
                 await cb.message.edit_text("📂 <b>Free Samples</b>\nNothing uploaded yet.", reply_markup=admin_back_dash_kb())
             else:
-                await cb.message.edit_text("📂 <b>Free Samples</b>", reply_markup=admin_materials_kb(items, course, "sample"))
+                await cb.message.edit_text(f"📂 <b>Free Samples</b>\n────────────────────────\n<i>Contains {len(items)} files</i>", reply_markup=admin_materials_kb(items, course, "sample"))
         else:
-            await cb.message.edit_text(f"📁 <b>{course}</b> - Select Category:", reply_markup=admin_categories_kb("manage", course))
+            stats = await crud.get_course_stats(session, course)
+            from bot.utils.constants import format_course_stats
+            stats_text = format_course_stats(stats)
+            await cb.message.edit_text(f"📁 <b>{course}</b> - Select Category:\n────────────────────────\n{stats_text}", reply_markup=admin_categories_kb("manage", course))
     elif step == "examyear":
         course = parts[3]
         exam_type = parts[4]
         title = "Mid Exams" if exam_type == "exams_mid" else "Final Exams"
-        await cb.message.edit_text(f"📝 <b>{course}</b> - Select {title} Year:", reply_markup=admin_exam_years_kb("manage", course, exam_type))
+        
+        stats = await crud.get_course_stats(session, course)
+        count = stats.get(exam_type, 0)
+        
+        await cb.message.edit_text(f"📝 <b>{course}</b> - Select {title} Year:\n────────────────────────\n<i>Contains {count} {title} total</i>", reply_markup=admin_exam_years_kb("manage", course, exam_type))
     elif step == "final":
         course, category = parts[3], parts[4]
         if category.startswith("exams_"):
@@ -192,10 +206,18 @@ async def admin_manage_flow(cb: CallbackQuery, session: AsyncSession) -> None:
             materials = await crud.list_exams(session, course, year, db_category)
         else:
             materials = await crud.list_materials(session, course, category)
+            
+        display_cat = category
+        if category.startswith("exams_"):
+            parts_cat = category.split("_")
+            extype = "Mid Exams" if parts_cat[1] == "mid" else "Final Exams"
+            display_cat = f"{extype} ({parts_cat[2]})"
+            
         if not materials:
-            await cb.message.edit_text(f"📂 <b>{course} • {category}</b>\n\nNo materials found here.", reply_markup=admin_categories_kb("manage", course))
+            await cb.message.edit_text(f"📂 <b>{course} • {display_cat}</b>\n\nNo materials found here.", reply_markup=admin_categories_kb("manage", course))
         else:
-            await cb.message.edit_text(f"📂 <b>{course} • {category}</b>\nSelect a file:", reply_markup=admin_materials_kb(materials, course, category))
+            file_word = "file" if len(materials) == 1 else "files"
+            await cb.message.edit_text(f"📂 <b>{course} • {display_cat}</b>\n────────────────────────\n<i>Contains {len(materials)} {file_word}</i>\n\nSelect a file:", reply_markup=admin_materials_kb(materials, course, category))
     await cb.answer()
 
 @router.callback_query(IsAdmin(), F.data.startswith("admin:mat:"))

@@ -140,6 +140,16 @@ async def get_analytics(session: AsyncSession) -> dict:
         "approved_payments": approved_payments
     }
 
+async def get_course_stats(session: AsyncSession, course_code: str) -> dict[str, int]:
+    from sqlalchemy import func
+    stmt = (
+        select(Material.category, func.count(Material.id))
+        .where(Material.course_code == course_code)
+        .group_by(Material.category)
+    )
+    result = await session.execute(stmt)
+    return dict(result.all())
+
 async def delete_material(session: AsyncSession, material_id: int) -> Material | None:
     m = await get_material(session, material_id)
     if m:

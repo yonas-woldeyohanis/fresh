@@ -25,7 +25,11 @@ async def exam_types(cb: CallbackQuery, session: AsyncSession) -> None:
     if code not in courses:
         return await cb.answer("Unknown course.", show_alert=True)
     
-    text = f"📝 <b>{courses[code]}</b>\n\nSelect Exam Type:"
+    stats = await crud.get_course_stats(session, code)
+    mid_count = stats.get("exams_mid", 0)
+    final_count = stats.get("exams_final", 0)
+    
+    text = f"📝 <b>{courses[code]}</b>\n────────────────────────\n<i>Contains {mid_count} Mid Exams and {final_count} Final Exams</i>\n\nSelect Exam Type:"
     await safe_edit(cb.message, text, exam_types_kb(code))
     await cb.answer()
 
@@ -64,9 +68,16 @@ async def exam_list(cb: CallbackQuery, session: AsyncSession, db_user: User) -> 
     items = await crud.list_exams(session, code, year_i, exam_type)
     
     type_name = "Mid Exams" if exam_type == "exams_mid" else "Final Exams"
+    
+    if items:
+        file_word = "file" if len(items) == 1 else "files"
+        text = f"📝 <b>{courses[code]}</b> — {type_name} ({year_i})\n────────────────────────\n<i>Contains {len(items)} {file_word}</i>\n\nTap an exam to receive it."
+    else:
+        text = f"📝 <b>{courses[code]}</b> — {type_name} ({year_i})\n────────────────────────\n\n<i>No exams found.</i>"
+        
     await safe_edit(
         cb.message,
-        f"📝 <b>{courses[code]}</b> — {type_name} ({year_i})\n\nTap an exam to receive it.",
+        text,
         materials_kb(items, has_access(db_user), back=f"ex:t:{code}:{exam_type}"),
     )
     await cb.answer()
