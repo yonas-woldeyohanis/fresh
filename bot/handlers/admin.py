@@ -15,7 +15,7 @@ from bot.keyboards.inline import open_menu_kb
 from bot.keyboards.admin_kb import (
     admin_main_kb, admin_courses_kb, admin_categories_kb,
     admin_materials_kb, admin_material_details_kb, admin_cancel_kb,
-    admin_back_dash_kb
+    admin_back_dash_kb, admin_exam_years_kb
 )
 from bot.states import AdminMode
 from bot.utils.constants import ALL_CATEGORIES, COURSES, EXAMS
@@ -84,13 +84,21 @@ async def admin_upload_flow(cb: CallbackQuery, state: FSMContext, session: Async
             )
         else:
             await cb.message.edit_text(f"📁 <b>{course}</b> - Select Category:", reply_markup=admin_categories_kb("upload", course))
+    elif step == "examyear":
+        course = parts[3]
+        await cb.message.edit_text(f"📝 <b>{course}</b> - Select Exam Year:", reply_markup=admin_exam_years_kb("upload", course))
     elif step == "final":
         course, category = parts[3], parts[4]
+        
+        display_cat = category
+        if category.startswith("exams_"):
+            display_cat = f"Exams ({category.split('_')[1]})"
+            
         await state.set_state(AdminMode.uploading)
         await state.update_data(course=course, category=category)
         await cb.message.edit_text(
             f"🚀 <b>Upload Mode Active</b>\n\n"
-            f"<b>Course:</b> {course}\n<b>Category:</b> {category}\n\n"
+            f"<b>Course:</b> {course}\n<b>Category:</b> {display_cat}\n\n"
             "👉 Send or forward any files now. The bot will automatically use their file names as titles.\n\n"
             "<i>Click Cancel or send /admin when you are finished.</i>",
             reply_markup=admin_cancel_kb()
@@ -132,9 +140,16 @@ async def bulk_upload_material(message: Message, bot: Bot, session: AsyncSession
         await wait_msg.delete()
         return await message.answer(f"❌ Couldn't store the file: <code>{escape(str(e))}</code>")
 
+    exam_year = None
+    db_category = category
+    if category.startswith("exams_"):
+        db_category = "exams"
+        exam_year = int(category.split("_")[1])
+
     m = await crud.add_material(
-        session, course_code=course, category=category, title=title,
-        channel_message_id=copied.message_id, file_id=file_id, is_sample=(course == "sample")
+        session, course_code=course, category=db_category, title=title,
+        channel_message_id=copied.message_id, file_id=file_id, 
+        exam_year=exam_year, is_sample=(course == "sample")
     )
     await wait_msg.edit_text(f"✅ Added <b>#{m.id}</b>: {escape(title)}\n<i>(Keep sending files, or /admin to exit)</i>")
 
@@ -158,9 +173,16 @@ async def admin_manage_flow(cb: CallbackQuery, session: AsyncSession) -> None:
                 await cb.message.edit_text("📂 <b>Free Samples</b>", reply_markup=admin_materials_kb(items, course, "sample"))
         else:
             await cb.message.edit_text(f"📁 <b>{course}</b> - Select Category:", reply_markup=admin_categories_kb("manage", course))
+    elif step == "examyear":
+        course = parts[3]
+        await cb.message.edit_text(f"📝 <b>{course}</b> - Select Exam Year:", reply_markup=admin_exam_years_kb("manage", course))
     elif step == "final":
         course, category = parts[3], parts[4]
-        materials = await crud.list_materials(session, course, category)
+        if category.startswith("exams_"):
+            year = int(category.split("_")[1])
+            materials = await crud.list_exams(session, course, year)
+        else:
+            materials = await crud.list_materials(session, course, category)
         if not materials:
             await cb.message.edit_text(f"📂 <b>{course} • {category}</b>\n\nNo materials found here.", reply_markup=admin_categories_kb("manage", course))
         else:

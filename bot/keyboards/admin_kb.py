@@ -29,7 +29,14 @@ def admin_courses_kb(action: str, courses_dict: dict[str, str]) -> InlineKeyboar
 
 def admin_categories_kb(action: str, course: str) -> InlineKeyboardMarkup:
     rows = _grid([Btn(text=label, callback_data=f"admin:{action}:final:{course}:{key}") for key, label in CATEGORIES.items()], 2)
+    rows.append([Btn(text="📝 Past Exams", callback_data=f"admin:{action}:examyear:{course}")])
     rows.append([Btn(text="⬅️ Back to Courses", callback_data=f"admin:{action}:course")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+def admin_exam_years_kb(action: str, course: str) -> InlineKeyboardMarkup:
+    years = [2012, 2013, 2014, 2015, 2016, 2017]
+    rows = _grid([Btn(text=f"📅 {y}", callback_data=f"admin:{action}:final:{course}:exams_{y}") for y in years], 3)
+    rows.append([Btn(text="⬅️ Back to Categories", callback_data=f"admin:{action}:cat:{course}")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 def admin_materials_kb(materials: Sequence[Material], course: str, category: str, page: int = 0) -> InlineKeyboardMarkup:
