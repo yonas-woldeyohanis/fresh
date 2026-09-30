@@ -14,7 +14,8 @@ from bot.db.models import PaymentStatus
 from bot.keyboards.inline import open_menu_kb
 from bot.keyboards.admin_kb import (
     admin_main_kb, admin_courses_kb, admin_categories_kb,
-    admin_materials_kb, admin_material_details_kb, admin_cancel_kb
+    admin_materials_kb, admin_material_details_kb, admin_cancel_kb,
+    admin_back_dash_kb
 )
 from bot.states import AdminMode
 from bot.utils.constants import ALL_CATEGORIES, COURSES, EXAMS

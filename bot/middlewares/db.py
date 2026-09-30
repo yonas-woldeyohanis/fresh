@@ -50,4 +50,14 @@ class UserMiddleware(BaseMiddleware):
                     )
             data["db_user"] = db_user
             
+            # --- Logging who clicked what ---
+            from aiogram.types import CallbackQuery
+            import logging
+            log = logging.getLogger("action_logger")
+            name = tg_user.full_name or tg_user.username or str(tg_user.id)
+            if isinstance(event, CallbackQuery) and event.data:
+                log.info(f"👉 USER {name} clicked button: {event.data}")
+            elif isinstance(event, Message) and event.text:
+                log.info(f"💬 USER {name} sent text: {event.text}")
+            
         return await handler(event, data)
