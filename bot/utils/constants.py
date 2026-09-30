@@ -8,5 +8,6 @@ CATEGORIES: dict[str, str] = {
     "worksheets": "🎯 Worksheets",
 }
 
-EXAMS = "exams"
-ALL_CATEGORIES = {*CATEGORIES, EXAMS}
+EXAMS_MID = "exams_mid"
+EXAMS_FINAL = "exams_final"
+ALL_CATEGORIES = {*CATEGORIES, EXAMS_MID, EXAMS_FINAL}

@@ -5,7 +5,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.db.models import Material, Payment, PaymentStatus, User, Course
-from bot.utils.constants import EXAMS
+
 
 
 # ---------- users ----------
@@ -102,12 +102,12 @@ async def list_samples(session: AsyncSession) -> Sequence[Material]:
     return (await session.execute(stmt)).scalars().all()
 
 
-async def list_exam_years(session: AsyncSession, course_code: str) -> Sequence[int]:
+async def list_exam_years(session: AsyncSession, course_code: str, exam_type: str) -> Sequence[int]:
     stmt = (
         select(Material.exam_year)
         .where(
             Material.course_code == course_code,
-            Material.category == EXAMS,
+            Material.category == exam_type,
             Material.exam_year.is_not(None),
         )
         .distinct()
@@ -116,10 +116,10 @@ async def list_exam_years(session: AsyncSession, course_code: str) -> Sequence[i
     return (await session.execute(stmt)).scalars().all()
 
 
-async def list_exams(session: AsyncSession, course_code: str, year: int) -> Sequence[Material]:
+async def list_exams(session: AsyncSession, course_code: str, year: int, exam_type: str) -> Sequence[Material]:
     stmt = (
         select(Material)
-        .where(Material.course_code == course_code, Material.category == EXAMS, Material.exam_year == year)
+        .where(Material.course_code == course_code, Material.category == exam_type, Material.exam_year == year)
         .order_by(Material.id)
     )
     return (await session.execute(stmt)).scalars().all()

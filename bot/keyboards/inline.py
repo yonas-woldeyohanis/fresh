@@ -54,10 +54,17 @@ def exam_courses_kb(courses_dict: dict[str, str]) -> InlineKeyboardMarkup:
     rows.append(_back("menu:main"))
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
+def exam_types_kb(code: str) -> InlineKeyboardMarkup:
+    rows = [
+        [Btn(text="📝 Mid Exams", callback_data=f"ex:t:{code}:exams_mid"), Btn(text="📝 Final Exams", callback_data=f"ex:t:{code}:exams_final")],
+        _back("exams")
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
-def exam_years_kb(code: str, years: Sequence[int]) -> InlineKeyboardMarkup:
-    rows = _grid([Btn(text=f"📅 {y}", callback_data=f"ex:y:{code}:{y}") for y in years], 3)
-    rows.append(_back("exams"))
+
+def exam_years_kb(code: str, exam_type: str, years: Sequence[int]) -> InlineKeyboardMarkup:
+    rows = _grid([Btn(text=f"📅 {y}", callback_data=f"ex:y:{code}:{exam_type}:{y}") for y in years], 3)
+    rows.append(_back(f"ex:c:{code}"))
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 

@@ -68,7 +68,7 @@ async def prompt_ai_tutor(cb: CallbackQuery, state: FSMContext, session: AsyncSe
     # Pass the entire system dictionary into state so we don't have to fetch it later
     system_knowledge = {
         "courses": list(courses.values()),
-        "categories": list(CATEGORIES.values()),
+        "categories": list(CATEGORIES.values()) + ["Mid Exams", "Final Exams"],
         "premium_price": price,
     }
 

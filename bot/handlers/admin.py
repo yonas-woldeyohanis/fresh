@@ -18,7 +18,7 @@ from bot.keyboards.admin_kb import (
     admin_back_dash_kb, admin_exam_years_kb
 )
 from bot.states import AdminMode
-from bot.utils.constants import ALL_CATEGORIES, COURSES, EXAMS
+from bot.utils.constants import ALL_CATEGORIES, COURSES
 
 router = Router()
 log = logging.getLogger(__name__)
@@ -86,13 +86,17 @@ async def admin_upload_flow(cb: CallbackQuery, state: FSMContext, session: Async
             await cb.message.edit_text(f"📁 <b>{course}</b> - Select Category:", reply_markup=admin_categories_kb("upload", course))
     elif step == "examyear":
         course = parts[3]
-        await cb.message.edit_text(f"📝 <b>{course}</b> - Select Exam Year:", reply_markup=admin_exam_years_kb("upload", course))
+        exam_type = parts[4]
+        title = "Mid Exams" if exam_type == "exams_mid" else "Final Exams"
+        await cb.message.edit_text(f"📝 <b>{course}</b> - Select {title} Year:", reply_markup=admin_exam_years_kb("upload", course, exam_type))
     elif step == "final":
         course, category = parts[3], parts[4]
         
         display_cat = category
         if category.startswith("exams_"):
-            display_cat = f"Exams ({category.split('_')[1]})"
+            parts_cat = category.split("_")
+            extype = "Mid Exams" if parts_cat[1] == "mid" else "Final Exams"
+            display_cat = f"{extype} ({parts_cat[2]})"
             
         await state.set_state(AdminMode.uploading)
         await state.update_data(course=course, category=category)
@@ -143,8 +147,9 @@ async def bulk_upload_material(message: Message, bot: Bot, session: AsyncSession
     exam_year = None
     db_category = category
     if category.startswith("exams_"):
-        db_category = "exams"
-        exam_year = int(category.split("_")[1])
+        parts_cat = category.split("_") # ['exams', 'mid', '2012']
+        db_category = f"{parts_cat[0]}_{parts_cat[1]}" # 'exams_mid' or 'exams_final'
+        exam_year = int(parts_cat[2])
 
     m = await crud.add_material(
         session, course_code=course, category=db_category, title=title,
@@ -175,12 +180,16 @@ async def admin_manage_flow(cb: CallbackQuery, session: AsyncSession) -> None:
             await cb.message.edit_text(f"📁 <b>{course}</b> - Select Category:", reply_markup=admin_categories_kb("manage", course))
     elif step == "examyear":
         course = parts[3]
-        await cb.message.edit_text(f"📝 <b>{course}</b> - Select Exam Year:", reply_markup=admin_exam_years_kb("manage", course))
+        exam_type = parts[4]
+        title = "Mid Exams" if exam_type == "exams_mid" else "Final Exams"
+        await cb.message.edit_text(f"📝 <b>{course}</b> - Select {title} Year:", reply_markup=admin_exam_years_kb("manage", course, exam_type))
     elif step == "final":
         course, category = parts[3], parts[4]
         if category.startswith("exams_"):
-            year = int(category.split("_")[1])
-            materials = await crud.list_exams(session, course, year)
+            parts_cat = category.split("_")
+            db_category = f"{parts_cat[0]}_{parts_cat[1]}"
+            year = int(parts_cat[2])
+            materials = await crud.list_exams(session, course, year, db_category)
         else:
             materials = await crud.list_materials(session, course, category)
         if not materials:
