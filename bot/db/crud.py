@@ -22,6 +22,9 @@ async def upsert_user(session: AsyncSession, telegram_id: int, username: str | N
     return (await session.execute(stmt)).scalar_one()
 
 
+async def get_user(session: AsyncSession, telegram_id: int) -> User | None:
+    return await session.get(User, telegram_id)
+
 async def verify_user(session: AsyncSession, telegram_id: int) -> None:
     await session.execute(update(User).where(User.telegram_id == telegram_id).values(is_verified=True))
 

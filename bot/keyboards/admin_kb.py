@@ -74,6 +74,7 @@ def admin_payment_settings_kb() -> InlineKeyboardMarkup:
     rows = [
         [Btn(text="🏦 Edit CBE Account", callback_data="admin:paycfg:cbe_account")],
         [Btn(text="📱 Edit Telebirr", callback_data="admin:paycfg:telebirr_number")],
+        [Btn(text="🌐 Edit Other Banks/Platforms", callback_data="admin:paycfg:other_banks")],
         [Btn(text="👤 Edit Holder Name", callback_data="admin:paycfg:account_holder")],
         [Btn(text="💵 Edit Price (ETB)", callback_data="admin:paycfg:price_etb")],
         [Btn(text="⬅️ Back to Dashboard", callback_data="admin:dash")]

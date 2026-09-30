@@ -34,7 +34,20 @@ class UserMiddleware(BaseMiddleware):
     ) -> Any:
         tg_user = data.get("event_from_user")
         if tg_user and not tg_user.is_bot:
-            data["db_user"] = await crud.upsert_user(
-                data["session"], tg_user.id, tg_user.username, tg_user.full_name
-            )
+            # Optimize: Only perform a heavy UPSERT on new messages or if user is missing
+            # Callback queries (button clicks) just do a fast SELECT to check verify status
+            db_user = None
+            from aiogram.types import Message
+            if isinstance(event, Message):  # if it's a message, upsert to update name/username
+                db_user = await crud.upsert_user(
+                    data["session"], tg_user.id, tg_user.username, tg_user.full_name
+                )
+            else:
+                db_user = await crud.get_user(data["session"], tg_user.id)
+                if not db_user:
+                    db_user = await crud.upsert_user(
+                        data["session"], tg_user.id, tg_user.username, tg_user.full_name
+                    )
+            data["db_user"] = db_user
+            
         return await handler(event, data)

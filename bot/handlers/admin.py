@@ -365,6 +365,7 @@ from bot.keyboards.admin_kb import admin_payment_settings_kb
 async def admin_pay_settings(cb: CallbackQuery, session: AsyncSession) -> None:
     cbe = await crud.get_value(session, "cbe_account") or settings.cbe_account
     tele = await crud.get_value(session, "telebirr_number") or settings.telebirr_number
+    other_banks = await crud.get_value(session, "other_banks") or "None set"
     holder = await crud.get_value(session, "account_holder") or settings.account_holder
     price = await crud.get_value(session, "price_etb") or settings.price_etb
 
@@ -372,6 +373,7 @@ async def admin_pay_settings(cb: CallbackQuery, session: AsyncSession) -> None:
         "💳 <b>Payment Settings</b>\n\n"
         f"🏦 <b>CBE Account:</b> <code>{cbe}</code>\n"
         f"📱 <b>Telebirr:</b> <code>{tele}</code>\n"
+        f"🌐 <b>Other Banks:</b>\n{other_banks}\n\n"
         f"👤 <b>Account Holder:</b> {holder}\n"
         f"💵 <b>Price:</b> {price} ETB\n\n"
         "Tap a button below to update these values dynamically:"
@@ -385,6 +387,7 @@ async def admin_paycfg_start(cb: CallbackQuery, state: FSMContext) -> None:
     labels = {
         "cbe_account": "CBE Account Number",
         "telebirr_number": "Telebirr Number",
+        "other_banks": "Other Banks/Platforms (e.g. Awash: 12345...)",
         "account_holder": "Account Holder Name",
         "price_etb": "Price (in ETB)"
     }

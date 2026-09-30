@@ -27,6 +27,7 @@ PAY_TEXT = (
     "<b>Payment Methods:</b>\n"
     "🏦 <b>CBE:</b> <code>{cbe}</code>\n"
     "📱 <b>Telebirr:</b> <code>{tele}</code>\n"
+    "{other_banks}"
     "👤 <b>Name:</b> {holder}\n\n"
     "<b>Steps to Verify:</b>\n"
     "1️⃣ Send exactly <b>{price} ETB</b> to one of the accounts above.\n"
@@ -50,6 +51,11 @@ async def start_payment(cb: CallbackQuery, state: FSMContext, session: AsyncSess
     tele = await crud.get_value(session, "telebirr_number") or settings.telebirr_number
     holder = await crud.get_value(session, "account_holder") or settings.account_holder
     price = await crud.get_value(session, "price_etb") or settings.price_etb
+    other_banks_raw = await crud.get_value(session, "other_banks")
+    
+    other_banks_text = ""
+    if other_banks_raw:
+        other_banks_text = f"🏦 <b>Other Banks/Platforms:</b>\n{escape(other_banks_raw)}\n"
 
     await state.set_state(PaymentFlow.waiting_for_receipt)
     await safe_edit(
@@ -58,6 +64,7 @@ async def start_payment(cb: CallbackQuery, state: FSMContext, session: AsyncSess
             price=price,
             cbe=escape(cbe),
             tele=escape(tele),
+            other_banks=other_banks_text,
             holder=escape(holder),
         ),
         cancel_payment_kb(),
