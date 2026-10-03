@@ -2,6 +2,7 @@ import logging
 from datetime import datetime, timezone
 
 from aiogram import Bot, F, Router
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message, InlineKeyboardButton, InlineKeyboardMarkup
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -142,7 +143,10 @@ async def handle_ai_question(message: Message, state: FSMContext, session: Async
         ans = response.text
         chat_history += f" {ans}\n"
         await state.update_data(chat_history=chat_history)
-        await wait_msg.edit_text(ans, parse_mode="Markdown")
+        try:
+            await wait_msg.edit_text(ans, parse_mode="Markdown")
+        except TelegramBadRequest:
+            await wait_msg.edit_text(ans, parse_mode=None)
         
     except Exception as e:
         log.warning(f"Gemini API failed ({e}), falling back to Groq...")
@@ -162,12 +166,16 @@ async def handle_ai_question(message: Message, state: FSMContext, session: Async
                     {"role": "system", "content": system_instruction},
                     {"role": "user", "content": chat_history}
                 ],
-                model="llama3-70b-8192",
+                model="llama-3.1-70b-versatile",
             )
             ans = groq_resp.choices[0].message.content
             chat_history += f" {ans}\n"
             await state.update_data(chat_history=chat_history)
-            await wait_msg.edit_text(ans, parse_mode="Markdown")
+            
+            try:
+                await wait_msg.edit_text(ans, parse_mode="Markdown")
+            except TelegramBadRequest:
+                await wait_msg.edit_text(ans, parse_mode=None)
             
         except Exception as groq_e:
             log.exception("Both Gemini and Groq failed")
