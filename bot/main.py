@@ -26,13 +26,13 @@ async def main() -> None:
         observer.outer_middleware(UserMiddleware())
     dp.callback_query.outer_middleware(AccessMiddleware())
 
-    from bot.handlers import admin, courses, exams, materials, payment, samples, start, ai_tutor
+    from bot.handlers import admin, courses, exams, materials, payment, samples, start, ai_tutor, errors
     
     # start first so /start always escapes the payment FSM
     dp.include_routers(
         start.router, admin.router, payment.router,
         courses.router, exams.router, samples.router, materials.router,
-        ai_tutor.router,
+        ai_tutor.router, errors.router,
     )
 
     await bot.delete_webhook(drop_pending_updates=True)
