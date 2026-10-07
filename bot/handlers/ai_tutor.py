@@ -132,12 +132,14 @@ async def handle_ai_question(message: Message, state: FSMContext, session: Async
         chat_history = data.get("chat_history", f"Context: {course_name}\n")
         chat_history += f"\nStudent: {message.text}\nAI:"
         
-        response = client.models.generate_content(
-            model='gemini-3.8-flash',
+        import asyncio
+        response = await asyncio.to_thread(
+            client.models.generate_content,
+            model='gemini-1.5-flash',
             contents=chat_history,
             config=types.GenerateContentConfig(
                 system_instruction=system_instruction
-            ),
+            )
         )
         
         ans = response.text

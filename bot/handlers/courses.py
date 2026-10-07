@@ -14,6 +14,7 @@ router = Router()
 
 @router.callback_query(F.data.startswith("course:"))
 async def open_course(cb: CallbackQuery, session: AsyncSession) -> None:
+    ai_enabled = await crud.get_value(session, "ai_enabled", default="true") == "true"
     code = cb.data.split(":")[1]
     courses = await crud.get_course_dict(session)
     if code not in courses:
@@ -25,13 +26,14 @@ async def open_course(cb: CallbackQuery, session: AsyncSession) -> None:
     await safe_edit(
         cb.message, 
         f"📚 <b>{courses[code]}</b>\n────────────────────────\n{stats_text}\n\nChoose a resource type below:", 
-        course_menu_kb(code)
+        course_menu_kb(code, ai_enabled)
     )
     await cb.answer()
 
 
 @router.callback_query(F.data.startswith("cat:"))
 async def open_category(cb: CallbackQuery, session: AsyncSession, db_user: User) -> None:
+    ai_enabled = await crud.get_value(session, "ai_enabled", default="true") == "true"
     try:
         _, code, cat = cb.data.split(":")
     except ValueError:

@@ -46,6 +46,7 @@ async def cb_admin_dashboard(cb: CallbackQuery, session: AsyncSession, state: FS
 
 async def send_dashboard(message: Message, session: AsyncSession, is_edit: bool = False):
     stats = await crud.get_analytics(session)
+    ai_enabled = await crud.get_value(session, "ai_enabled", default="true") == "true"
     text = (
         f"👑 <b>{escape(settings.university_name)} - Admin Panel</b>\n\n"
         f"👥 <b>Total Students:</b> {stats['total_users']}\n"
@@ -56,9 +57,18 @@ async def send_dashboard(message: Message, session: AsyncSession, is_edit: bool 
         "<i>Select an action below:</i>"
     )
     if is_edit:
-        await message.edit_text(text, reply_markup=admin_main_kb())
+        await message.edit_text(text, reply_markup=admin_main_kb(ai_enabled))
     else:
-        await message.answer(text, reply_markup=admin_main_kb())
+        await message.answer(text, reply_markup=admin_main_kb(ai_enabled))
+
+@router.callback_query(IsAdmin(), F.data == "admin:toggle_ai")
+async def toggle_ai_tutor(cb: CallbackQuery, session: AsyncSession) -> None:
+    current = await crud.get_value(session, "ai_enabled", default="true")
+    new_val = "false" if current == "true" else "true"
+    await crud.set_value(session, "ai_enabled", new_val)
+    await session.commit()
+    await send_dashboard(cb.message, session, is_edit=True)
+    await cb.answer(f"AI Tutor turned {'ON' if new_val == 'true' else 'OFF'}")
 
 
 # ---------- Upload Flow ----------

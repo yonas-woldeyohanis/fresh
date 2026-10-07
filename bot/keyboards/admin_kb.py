@@ -7,12 +7,14 @@ from bot.utils.constants import CATEGORIES
 def _grid(buttons: list[Btn], cols: int) -> list[list[Btn]]:
     return [buttons[i : i + cols] for i in range(0, len(buttons), cols)]
 
-def admin_main_kb() -> InlineKeyboardMarkup:
+def admin_main_kb(ai_enabled: bool = True) -> InlineKeyboardMarkup:
+    ai_status = "✅ ON" if ai_enabled else "❌ OFF"
     rows = [
         [Btn(text="📤 Upload New Resource", callback_data="admin:upload:course")],
         [Btn(text="📂 Manage Resources", callback_data="admin:manage:course")],
         [Btn(text="🏫 Manage Courses", callback_data="admin:courses:list")],
         [Btn(text="💳 Payment Settings", callback_data="admin:pay_settings")],
+        [Btn(text=f"🤖 AI Tutor: {ai_status}", callback_data="admin:toggle_ai")],
         [Btn(text="🎬 Set Intro Video", callback_data="admin:intro_video")],
         [Btn(text="🔄 Refresh Stats", callback_data="admin:dash")]
     ]

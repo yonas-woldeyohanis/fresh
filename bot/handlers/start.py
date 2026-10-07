@@ -46,21 +46,22 @@ async def cmd_start(message: Message, state: FSMContext, session: AsyncSession, 
     courses_dict = await crud.get_course_dict(session)
     
     intro_video_id = await crud.get_value(session, "intro_video")
+    ai_enabled = await crud.get_value(session, "ai_enabled", default="true") == "true"
     if intro_video_id:
         try:
-            await message.answer_video(intro_video_id, caption=_welcome(db_user), reply_markup=main_menu_kb(has_access(db_user), courses_dict))
+            await message.answer_video(intro_video_id, caption=_welcome(db_user), reply_markup=main_menu_kb(has_access(db_user), courses_dict, ai_enabled))
             return
         except Exception:
             pass # fallback to text if video fails
             
-    await message.answer(_welcome(db_user), reply_markup=main_menu_kb(has_access(db_user), courses_dict))
+    await message.answer(_welcome(db_user), reply_markup=main_menu_kb(has_access(db_user), courses_dict, ai_enabled))
 
 
 @router.callback_query(F.data == "menu:main")
 async def back_to_main(cb: CallbackQuery, state: FSMContext, session: AsyncSession, db_user: User) -> None:
     await state.clear()
     courses_dict = await crud.get_course_dict(session)
-    await safe_edit(cb.message, _welcome(db_user), main_menu_kb(has_access(db_user), courses_dict))
+    await safe_edit(cb.message, _welcome(db_user), main_menu_kb(has_access(db_user), courses_dict, ai_enabled))
     await cb.answer()
 
 
@@ -115,6 +116,7 @@ async def on_user_join_channel(event: ChatMemberUpdated, bot: Bot, session: Asyn
         # The user just joined! Let's proactively send them the welcome menu.
         courses_dict = await crud.get_course_dict(session)
         intro_video_id = await crud.get_value(session, "intro_video")
+    ai_enabled = await crud.get_value(session, "ai_enabled", default="true") == "true"
         
         try:
             if intro_video_id:
@@ -122,13 +124,13 @@ async def on_user_join_channel(event: ChatMemberUpdated, bot: Bot, session: Asyn
                     chat_id=event.from_user.id,
                     video=intro_video_id,
                     caption=_welcome(db_user),
-                    reply_markup=main_menu_kb(has_access(db_user), courses_dict)
+                    reply_markup=main_menu_kb(has_access(db_user), courses_dict, ai_enabled)
                 )
             else:
                 await bot.send_message(
                     chat_id=event.from_user.id,
                     text=_welcome(db_user),
-                    reply_markup=main_menu_kb(has_access(db_user), courses_dict)
+                    reply_markup=main_menu_kb(has_access(db_user), courses_dict, ai_enabled)
                 )
         except Exception:
             pass # They might have blocked the bot

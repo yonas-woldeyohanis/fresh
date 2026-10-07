@@ -15,14 +15,15 @@ def _back(data: str, text: str = "⬅️ Back") -> list[Btn]:
     return [Btn(text=text, callback_data=data)]
 
 
-def main_menu_kb(has_access: bool, courses_dict: dict[str, str]) -> InlineKeyboardMarkup:
+def main_menu_kb(has_access: bool, courses_dict: dict[str, str], ai_enabled: bool = True) -> InlineKeyboardMarkup:
     # Big buttons for courses (1 per row)
     rows = _grid([Btn(text=f"📚 {n}", callback_data=f"course:{c}") for c, n in courses_dict.items()], 1)
     # Give Free Samples and Past Exams their own wide buttons
     rows.append([Btn(text="🎁 Free Samples", callback_data="samples")])
     rows.append([Btn(text="📝 Past Exams", callback_data="exams")])
     
-    rows.append([Btn(text="🤖 Ask AI Tutor", callback_data="ask_ai:main")])
+    if ai_enabled:
+        rows.append([Btn(text="🤖 Ask AI Tutor", callback_data="ask_ai:main")])
     
     bottom_row = [Btn(text="👤 My Profile", callback_data="user:profile"), Btn(text="❓ Help & FAQ", callback_data="user:help")]
     rows.append(bottom_row)
@@ -32,10 +33,11 @@ def main_menu_kb(has_access: bool, courses_dict: dict[str, str]) -> InlineKeyboa
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
-def course_menu_kb(code: str) -> InlineKeyboardMarkup:
+def course_menu_kb(code: str, ai_enabled: bool = True) -> InlineKeyboardMarkup:
     # Big buttons for categories (1 per row)
     rows = _grid([Btn(text=label, callback_data=f"cat:{code}:{key}") for key, label in CATEGORIES.items()], 1)
-    rows.append([Btn(text="🤖 Ask AI Tutor", callback_data=f"ask_ai:{code}")])
+    if ai_enabled:
+        rows.append([Btn(text="🤖 Ask AI Tutor", callback_data=f"ask_ai:{code}")])
     rows.append(_back("menu:main"))
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
@@ -52,10 +54,11 @@ def materials_kb(
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
-def exam_courses_kb(courses_dict: dict[str, str]) -> InlineKeyboardMarkup:
+def exam_courses_kb(courses_dict: dict[str, str], ai_enabled: bool = True) -> InlineKeyboardMarkup:
     # Big buttons for courses
     rows = _grid([Btn(text=f"📚 {n}", callback_data=f"ex:c:{c}") for c, n in courses_dict.items()], 1)
-    rows.append([Btn(text="🤖 Ask AI Tutor", callback_data="ask_ai:exams")])
+    if ai_enabled:
+        rows.append([Btn(text="🤖 Ask AI Tutor", callback_data="ask_ai:exams")])
     rows.append(_back("menu:main"))
     return InlineKeyboardMarkup(inline_keyboard=rows)
 

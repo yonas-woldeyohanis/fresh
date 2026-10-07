@@ -14,7 +14,8 @@ router = Router()
 @router.callback_query(F.data == "exams")
 async def exams_hub(cb: CallbackQuery, session: AsyncSession) -> None:
     courses = await crud.get_course_dict(session)
-    await safe_edit(cb.message, "📝 <b>Past Exams Hub</b>\n\nChoose a course:", exam_courses_kb(courses))
+    ai_enabled = await crud.get_value(session, "ai_enabled", default="true") == "true"
+    await safe_edit(cb.message, "📝 <b>Past Exams Hub</b>\n\nChoose a course:", exam_courses_kb(courses, ai_enabled))
     await cb.answer()
 
 
