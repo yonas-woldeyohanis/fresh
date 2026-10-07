@@ -46,7 +46,7 @@ async def cmd_start(message: Message, state: FSMContext, session: AsyncSession, 
     courses_dict = await crud.get_course_dict(session)
     
     intro_video_id = await crud.get_value(session, "intro_video")
-    ai_enabled = await crud.get_value(session, "ai_enabled", default="true") == "true"
+    ai_enabled = (await crud.get_value(session, "ai_enabled") or "true") == "true"
     if intro_video_id:
         try:
             await message.answer_video(intro_video_id, caption=_welcome(db_user), reply_markup=main_menu_kb(has_access(db_user), courses_dict, ai_enabled))
@@ -116,7 +116,7 @@ async def on_user_join_channel(event: ChatMemberUpdated, bot: Bot, session: Asyn
         # The user just joined! Let's proactively send them the welcome menu.
         courses_dict = await crud.get_course_dict(session)
         intro_video_id = await crud.get_value(session, "intro_video")
-        ai_enabled = await crud.get_value(session, "ai_enabled", default="true") == "true"
+        ai_enabled = (await crud.get_value(session, "ai_enabled") or "true") == "true"
         
         try:
             if intro_video_id:

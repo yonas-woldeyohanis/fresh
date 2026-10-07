@@ -46,7 +46,7 @@ async def cb_admin_dashboard(cb: CallbackQuery, session: AsyncSession, state: FS
 
 async def send_dashboard(message: Message, session: AsyncSession, is_edit: bool = False):
     stats = await crud.get_analytics(session)
-    ai_enabled = await crud.get_value(session, "ai_enabled", default="true") == "true"
+    ai_enabled = (await crud.get_value(session, "ai_enabled") or "true") == "true"
     text = (
         f"👑 <b>{escape(settings.university_name)} - Admin Panel</b>\n\n"
         f"👥 <b>Total Students:</b> {stats['total_users']}\n"
@@ -63,7 +63,7 @@ async def send_dashboard(message: Message, session: AsyncSession, is_edit: bool 
 
 @router.callback_query(IsAdmin(), F.data == "admin:toggle_ai")
 async def toggle_ai_tutor(cb: CallbackQuery, session: AsyncSession) -> None:
-    current = await crud.get_value(session, "ai_enabled", default="true")
+    current = (await crud.get_value(session, "ai_enabled") or "true")
     new_val = "false" if current == "true" else "true"
     await crud.set_value(session, "ai_enabled", new_val)
     await session.commit()
