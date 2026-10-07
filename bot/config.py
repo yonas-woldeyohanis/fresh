@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     gemini_api_key: str = ""
     groq_api_key: str = ""
 
+    force_sub_channel_id: int | None = None
+    force_sub_channel_link: str | None = None
+
     cbe_account: str = "1000XXXXXXXXX"
     telebirr_number: str = "09XXXXXXXX"
     account_holder: str = "Account Holder"

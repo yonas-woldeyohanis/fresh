@@ -35,6 +35,12 @@ def _welcome(user: User) -> str:
 from sqlalchemy.ext.asyncio import AsyncSession
 from bot.db import crud
 
+@router.callback_query(F.data == "check_sub")
+async def check_sub_success(cb: CallbackQuery, state: FSMContext, session: AsyncSession, db_user: User) -> None:
+    await cb.answer("✅ Thank you for subscribing!", show_alert=True)
+    await cb.message.delete()
+    await cmd_start(cb.message, state, session, db_user)
+
 @router.message(CommandStart())
 async def cmd_start(message: Message, state: FSMContext, session: AsyncSession, db_user: User) -> None:
     await state.clear()
