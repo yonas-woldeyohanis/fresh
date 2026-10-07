@@ -116,7 +116,7 @@ async def on_user_join_channel(event: ChatMemberUpdated, bot: Bot, session: Asyn
         # The user just joined! Let's proactively send them the welcome menu.
         courses_dict = await crud.get_course_dict(session)
         intro_video_id = await crud.get_value(session, "intro_video")
-    ai_enabled = await crud.get_value(session, "ai_enabled", default="true") == "true"
+        ai_enabled = await crud.get_value(session, "ai_enabled", default="true") == "true"
         
         try:
             if intro_video_id:
