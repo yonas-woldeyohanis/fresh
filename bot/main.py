@@ -21,7 +21,7 @@ async def main() -> None:
     dp = Dispatcher(storage=MemoryStorage())
 
     # Order matters: session -> user -> force_sub -> access guard
-    for observer in (dp.message, dp.callback_query):
+    for observer in (dp.message, dp.callback_query, dp.chat_member):
         observer.outer_middleware(DbSessionMiddleware())
         observer.outer_middleware(UserMiddleware())
         observer.outer_middleware(ForceSubMiddleware())

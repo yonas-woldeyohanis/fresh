@@ -51,13 +51,17 @@ class ForceSubMiddleware(BaseMiddleware):
             ]
         )
         
-        text = "⚠️ <b>Access Denied</b>\n\nYou must subscribe to our official channel to use this bot!"
+        text = (
+            "👋 <b>Hello there!</b>\n\n"
+            "To stay updated and continue using the bot, please join our official channel first. "
+            "We share important updates and materials there!"
+        )
         
         if isinstance(event, Message):
             await event.answer(text, reply_markup=kb)
         elif isinstance(event, CallbackQuery):
             if event.data == "check_sub":
-                await event.answer("❌ You haven't subscribed yet!", show_alert=True)
+                await event.answer("You haven't subscribed yet. Please join the channel first.", show_alert=False)
             else:
                 await event.message.answer(text, reply_markup=kb)
                 await event.answer()

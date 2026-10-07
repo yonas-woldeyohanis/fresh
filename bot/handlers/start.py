@@ -1,13 +1,15 @@
 from html import escape
 
-from aiogram import F, Router
+from aiogram import F, Router, Bot
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery, Message, ChatMemberUpdated
 from aiogram.types import InlineKeyboardButton as Btn
 from aiogram.types import InlineKeyboardMarkup
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.config import settings
+from bot.db import crud
 from bot.db.models import User
 from bot.keyboards.inline import main_menu_kb
 from bot.utils.access import has_access
@@ -32,12 +34,9 @@ def _welcome(user: User) -> str:
     )
 
 
-from sqlalchemy.ext.asyncio import AsyncSession
-from bot.db import crud
-
 @router.callback_query(F.data == "check_sub")
 async def check_sub_success(cb: CallbackQuery, state: FSMContext, session: AsyncSession, db_user: User) -> None:
-    await cb.answer("✅ Thank you for subscribing!", show_alert=True)
+    await cb.answer("Thank you for subscribing!")
     await cb.message.delete()
     await cmd_start(cb.message, state, session, db_user)
 
@@ -100,3 +99,36 @@ async def show_help(cb: CallbackQuery) -> None:
     kb = InlineKeyboardMarkup(inline_keyboard=[[Btn(text="⬅️ Back to Menu", callback_data="menu:main")]])
     await safe_edit(cb.message, text, kb)
     await cb.answer()
+
+
+@router.chat_member()
+async def on_user_join_channel(event: ChatMemberUpdated, bot: Bot, session: AsyncSession, db_user: User) -> None:
+    # Only care if this is the force sub channel
+    if event.chat.id != settings.force_sub_channel_id:
+        return
+        
+    # Check if they transitioned to a member/admin
+    new_status = event.new_chat_member.status
+    old_status = event.old_chat_member.status
+    
+    if new_status in ("member", "administrator", "creator") and old_status not in ("member", "administrator", "creator"):
+        # The user just joined! Let's proactively send them the welcome menu.
+        courses_dict = await crud.get_course_dict(session)
+        intro_video_id = await crud.get_value(session, "intro_video")
+        
+        try:
+            if intro_video_id:
+                await bot.send_video(
+                    chat_id=event.from_user.id,
+                    video=intro_video_id,
+                    caption=_welcome(db_user),
+                    reply_markup=main_menu_kb(has_access(db_user), courses_dict)
+                )
+            else:
+                await bot.send_message(
+                    chat_id=event.from_user.id,
+                    text=_welcome(db_user),
+                    reply_markup=main_menu_kb(has_access(db_user), courses_dict)
+                )
+        except Exception:
+            pass # They might have blocked the bot
