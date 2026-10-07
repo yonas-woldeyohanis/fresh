@@ -61,6 +61,7 @@ async def cmd_start(message: Message, state: FSMContext, session: AsyncSession, 
 async def back_to_main(cb: CallbackQuery, state: FSMContext, session: AsyncSession, db_user: User) -> None:
     await state.clear()
     courses_dict = await crud.get_course_dict(session)
+    ai_enabled = (await crud.get_value(session, "ai_enabled") or "true") == "true"
     await safe_edit(cb.message, _welcome(db_user), main_menu_kb(has_access(db_user), courses_dict, ai_enabled))
     await cb.answer()
 
