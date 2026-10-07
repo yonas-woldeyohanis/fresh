@@ -40,9 +40,8 @@ class ForceSubMiddleware(BaseMiddleware):
                 return await handler(event, data)
         except Exception as e:
             log.warning(f"Failed to check membership for {user.id} in {settings.force_sub_channel_id}: {e}")
-            # If the bot is not an admin in the channel, it will fail.
-            # We might want to just let them pass if the bot is misconfigured.
-            pass
+            # Fail-open: If the bot is not an admin, don't lock everyone out
+            return await handler(event, data)
             
         kb = InlineKeyboardMarkup(
             inline_keyboard=[
@@ -63,7 +62,10 @@ class ForceSubMiddleware(BaseMiddleware):
             if event.data == "check_sub":
                 await event.answer("You haven't subscribed yet. Please join the channel first.", show_alert=False)
             else:
-                await event.message.answer(text, reply_markup=kb)
+                try:
+                    await event.message.edit_text(text, reply_markup=kb)
+                except Exception:
+                    pass
                 await event.answer()
                 
         return # Drop the update
